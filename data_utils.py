@@ -58,7 +58,7 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         skipped = 0
         for _id, spk, language, text, phones, tone, word2ph in self.audiopaths_sid_text:
             audiopath = f'{_id}'
-            if self.min_text_len <= len(phones) and len(phones) <= self.max_text_len:
+            if self.min_text_len <= len(phones) and len(phones) <= self.max_text_len and os.path.exists(audiopath):
                 phones = phones.split(" ")
                 tone = [int(i) for i in tone.split(" ")]
                 word2ph = [int(i) for i in word2ph.split(" ")]
