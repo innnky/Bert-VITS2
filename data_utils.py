@@ -20,7 +20,7 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         3) computes spectrograms from audio files.
     """
 
-    def __init__(self, audiopaths_sid_text, hparams):
+    def __init__(self, audiopaths_sid_text, hparams, meta=None):
         self.audiopaths_sid_text = load_filepaths_and_text(audiopaths_sid_text)
         self.max_wav_value = hparams.max_wav_value
         self.sampling_rate = hparams.sampling_rate
@@ -30,6 +30,7 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         self.sampling_rate = hparams.sampling_rate
         self.spk_map = hparams.spk2id
         self.hparams = hparams
+        self.meta = meta
 
         self.use_mel_spec_posterior = getattr(hparams, "use_mel_posterior_encoder", False)
         if self.use_mel_spec_posterior:
@@ -52,6 +53,13 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         # Store spectrogram lengths for Bucketing
         # wav_length ~= file_size / (wav_channels * Bytes per dim) = file_size / (1 * 2)
         # spec_length = wav_length // hop_length
+        if self.meta != None:
+            total_process, current_process = self.meta
+            audiopaths_sid_text_new = []
+            for idx, item in enumerate(self.audiopaths_sid_text):
+                if idx % total_process == current_process:
+                    audiopaths_sid_text_new.append(item)
+            self.audiopaths_sid_text = audiopaths_sid_text_new
 
         audiopaths_sid_text_new = []
         lengths = []
