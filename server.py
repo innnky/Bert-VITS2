@@ -33,13 +33,13 @@ def get_text(text, language_str, hps):
 
     if language_str == "ZH":
         bert = bert
-        ja_bert = torch.zeros(768, len(phone))
+        ja_bert = torch.zeros(1024, len(phone))
     elif language_str == "JA":
         ja_bert = bert
         bert = torch.zeros(1024, len(phone))
     else:
         bert = torch.zeros(1024, len(phone))
-        ja_bert = torch.zeros(768, len(phone))
+        ja_bert = torch.zeros(1024, len(phone))
     assert bert.shape[-1] == len(
         phone
     ), f"Bert seq len {bert.shape[-1]} != {len(phone)}"

@@ -9,7 +9,7 @@ widget:
 - text: 東北大学で[MASK]の研究をしています。
 ---
 
-# BERT base Japanese (unidic-lite with whole word masking, CC-100 and jawiki-20230102)
+# BERT large Japanese (unidic-lite with whole word masking, CC-100 and jawiki-20230102)
 
 This is a [BERT](https://github.com/google-research/bert) model pretrained on texts in the Japanese language.
 
@@ -20,7 +20,7 @@ The codes for the pretraining are available at [cl-tohoku/bert-japanese](https:/
 
 ## Model architecture
 
-The model architecture is the same as the original BERT base model; 12 layers, 768 dimensions of hidden states, and 12 attention heads.
+The model architecture is the same as the original BERT large model; 24 layers, 1024 dimensions of hidden states, and 16 attention heads.
 
 ## Training Data
 
