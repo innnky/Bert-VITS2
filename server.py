@@ -27,7 +27,7 @@ def get_text(text, language_str, hps):
         for i in range(len(word2ph)):
             word2ph[i] = word2ph[i] * 2
         word2ph[0] += 1
-    bert = get_bert(norm_text, word2ph, language_str)
+    bert = get_bert(norm_text, word2ph, language_str, device="cpu")
     del word2ph
     assert bert.shape[-1] == len(phone), phone
 
@@ -56,7 +56,7 @@ def infer(text, sdp_ratio, noise_scale, noise_scale_w, length_scale, sid, langua
         tones = tones.to(dev).unsqueeze(0)
         lang_ids = lang_ids.to(dev).unsqueeze(0)
         bert = bert.to(dev).unsqueeze(0)
-        ja_bert = ja_bert.to(device).unsqueeze(0)
+        ja_bert = ja_bert.to(dev).unsqueeze(0)
         x_tst_lengths = torch.LongTensor([phones.size(0)]).to(dev)
         speakers = torch.LongTensor([hps.data.spk2id[sid]]).to(dev)
         audio = (
@@ -119,7 +119,7 @@ net_g = SynthesizerTrn(
 ).to(dev)
 _ = net_g.eval()
 
-_ = utils.load_checkpoint("logs/G_649000.pth", net_g, None, skip_optimizer=True)
+_ = utils.load_checkpoint("logs/G_35000.pth", net_g, None, skip_optimizer=True)
 
 
 @app.route("/")
@@ -127,10 +127,10 @@ def main():
     try:
         speaker = request.args.get("speaker")
         text = request.args.get("text").replace("/n", "")
-        sdp_ratio = float(request.args.get("sdp_ratio", 0.2))
+        sdp_ratio = float(request.args.get("sdp_ratio", 0.5))
         noise = float(request.args.get("noise", 0.5))
         noisew = float(request.args.get("noisew", 0.6))
-        length = float(request.args.get("length", 1.2))
+        length = float(request.args.get("length", 1))
         language = request.args.get("language")
         if length >= 2:
             return "Too big length"
@@ -168,3 +168,4 @@ def main():
             return Response(
                 ofp.getvalue(), mimetype="audio/mpeg" if fmt == "mp3" else "audio/ogg"
             )
+app.run(host="0.0.0.0")

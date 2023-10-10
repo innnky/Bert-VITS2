@@ -10,6 +10,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.cuda.amp import autocast, GradScaler
 from tqdm import tqdm
 import logging
+import torch.multiprocessing as mp
 
 logging.getLogger("numba").setLevel(logging.WARNING)
 import commons
@@ -28,31 +29,22 @@ from losses import generator_loss, discriminator_loss, feature_loss, kl_loss
 from mel_processing import mel_spectrogram_torch, spec_to_mel_torch
 from text.symbols import symbols
 
-torch.backends.cuda.matmul.allow_tf32 = True
-torch.backends.cudnn.allow_tf32 = (
-    True  # If encontered training problem,please try to disable TF32.
-)
-torch.set_float32_matmul_precision("medium")
 torch.backends.cudnn.benchmark = True
-torch.backends.cuda.sdp_kernel("flash")
-torch.backends.cuda.enable_flash_sdp(True)
-torch.backends.cuda.enable_mem_efficient_sdp(
-    True
-)  # Not available if torch version is lower than 2.0
-torch.backends.cuda.enable_math_sdp(True)
 global_step = 0
 
 
-def run():
-    dist.init_process_group(
-        backend="gloo",
-        init_method="env://",  # Due to some training problem,we proposed to use gloo instead of nccl.
-    )  # Use torchrun instead of mp.spawn
-    rank = dist.get_rank()
-    n_gpus = dist.get_world_size()
+def main():
+    """Assume Single Node Multi GPUs Training Only"""
+    assert torch.cuda.is_available(), "CPU training is not allowed."
+
+    n_gpus = torch.cuda.device_count()
+    os.environ['MASTER_ADDR'] = 'localhost'
+    os.environ['MASTER_PORT'] = '8000'
+
     hps = utils.get_hparams()
-    torch.manual_seed(hps.train.seed)
-    torch.cuda.set_device(rank)
+    mp.spawn(run, nprocs=n_gpus, args=(n_gpus, hps,))
+
+def run(rank, n_gpus, hps):
     global global_step
     if rank == 0:
         logger = utils.get_logger(hps.model_dir)
@@ -60,6 +52,12 @@ def run():
         utils.check_git_hash(hps.model_dir)
         writer = SummaryWriter(log_dir=hps.model_dir)
         writer_eval = SummaryWriter(log_dir=os.path.join(hps.model_dir, "eval"))
+
+    dist.init_process_group(backend='gloo' if os.name == 'nt' else 'nccl', init_method='env://', world_size=n_gpus,
+                            rank=rank)
+    torch.manual_seed(hps.train.seed)
+    torch.cuda.set_device(rank)
+
     train_dataset = TextAudioSpeakerLoader(hps.data.training_files, hps.data)
     train_sampler = DistributedBucketSampler(
         train_dataset,
@@ -72,13 +70,12 @@ def run():
     collate_fn = TextAudioSpeakerCollate()
     train_loader = DataLoader(
         train_dataset,
-        num_workers=16,
+        num_workers=4,
         shuffle=False,
         pin_memory=True,
         collate_fn=collate_fn,
         batch_sampler=train_sampler,
         persistent_workers=True,
-        prefetch_factor=4,
     )  # DataLoader config could be adjusted.
     if rank == 0:
         eval_dataset = TextAudioSpeakerLoader(hps.data.validation_files, hps.data)
@@ -591,4 +588,4 @@ def evaluate(hps, generator, eval_loader, writer_eval):
 
 
 if __name__ == "__main__":
-    run()
+    main()

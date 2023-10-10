@@ -46,24 +46,22 @@ def get_text(text, language_str, hps):
         for i in range(len(word2ph)):
             word2ph[i] = word2ph[i] * 2
         word2ph[0] += 1
-    bert = get_bert(norm_text, word2ph, language_str, device)
+    bert = get_bert(norm_text, word2ph, language_str, device=device)
     del word2ph
     assert bert.shape[-1] == len(phone), phone
 
     if language_str == "ZH":
         bert = bert
         ja_bert = torch.zeros(1024, len(phone))
-    elif language_str == "JP":
+    elif language_str == "JA":
         ja_bert = bert
         bert = torch.zeros(1024, len(phone))
     else:
         bert = torch.zeros(1024, len(phone))
         ja_bert = torch.zeros(1024, len(phone))
-
     assert bert.shape[-1] == len(
         phone
     ), f"Bert seq len {bert.shape[-1]} != {len(phone)}"
-
     phone = torch.LongTensor(phone)
     tone = torch.LongTensor(tone)
     language = torch.LongTensor(language)
@@ -120,7 +118,7 @@ def tts_fn(text, speaker, sdp_ratio, noise_scale, noise_scale_w, length_scale, l
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-m", "--model", default="./logs/as/G_8000.pth", help="path of your model"
+        "-m", "--model", default="./logs/G_35000.pth", help="path of your model"
     )
     parser.add_argument(
         "-c",
@@ -176,7 +174,7 @@ if __name__ == "__main__":
                     choices=speakers, value=speakers[0], label="Speaker"
                 )
                 sdp_ratio = gr.Slider(
-                    minimum=0, maximum=1, value=0.2, step=0.1, label="SDP Ratio"
+                    minimum=0, maximum=1, value=0.5, step=0.1, label="SDP Ratio"
                 )
                 noise_scale = gr.Slider(
                     minimum=0.1, maximum=2, value=0.6, step=0.1, label="Noise Scale"
